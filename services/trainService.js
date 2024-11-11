@@ -22,7 +22,7 @@ const createTrainService=async(req,res)=>{
 
 const getAllTrainService=async(req,res)=>{
     try {
-        const allTrains=await Train.find()
+        const allTrains=await Train.find().populate("schedule").exec()
         if(!allTrains.length){
             return res.send(new ApiError(404,"No Train Found!"))
         }

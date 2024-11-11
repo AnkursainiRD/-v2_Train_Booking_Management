@@ -30,19 +30,9 @@ const trainSchema=new mongoose.Schema({
         type:String,
         required:true
     },
-    route:{
-        type:[String],
-        required:true
-    },
     schedule:{
-        departureTime:{
-            type:String,
-            required:true
-        },
-        arivalTime:{
-            type:String,
-            required:true
-        }
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"Schedule"
     },
     seatAvailiblity:[seatAvailiblitySchema]
 },{timestamps:true})

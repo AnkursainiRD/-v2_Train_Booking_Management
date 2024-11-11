@@ -13,13 +13,50 @@ const scheduleSchema=new mongoose.Schema({
         type:String,
         required:true
     },
-    routes:[
+    routeName:{
+        type:String,
+        required:true
+    },
+    routeCode:{
+        type:String,
+        required:true
+    },
+    stations:[
         {
-            station:String,
-            arrivalTime:String,
-            departureTime:String
+           stationCode:{
+            type:String,
+            required:true
+           },
+           stationName:{
+            type:String,
+            required:true
+           },
+           location:{
+                type:{
+                    type:String,
+                    enum:["Point"],
+                    required:true,
+                    default:"Point"
+                },
+                coordinates:{
+                    type:[Number],
+                    required:true
+                }
+           },
+           stopNumber:{
+            type:Number,
+            required:true
+           },
+           arrivalTime:{
+            type:String
+           },
+           departureTime:{
+            type:String
+           }
         }
     ]
 })
+
+scheduleSchema.index({'stations.location': '2dsphere'})
 
 export const Schedule= mongoose.model("Schedule",scheduleSchema)

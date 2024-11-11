@@ -14,6 +14,9 @@ const createScheduleService=async(req,res)=>{
         if(!schedule){
             return res.send(new ApiError(401,"Schedule Creation Failed! Try Again"))
         }
+
+        train.schedule=schedule._id
+        await train.save()
         return res.send(new ApiResponse(schedule,200,"Schedule Created Successfuly"))
     } catch (error) {
         console.log(error)
