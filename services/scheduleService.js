@@ -39,7 +39,7 @@ const getAllSchedulesService=async(req,res)=>{
 
 const getScheduleByIdService=async(req,res)=>{
     try {
-        const scheduleId = req.params.scheduleId
+        const scheduleId = req.query.id
         if(!scheduleId){
             return res.send(new ApiError(400,"Invalid Schedule Id! Try Again"))
         }
@@ -56,7 +56,7 @@ const getScheduleByIdService=async(req,res)=>{
 
 const updateScheduleByIdService=async(req,res)=>{
     try {
-        const scheduleId = req.params.scheduleId
+        const scheduleId = req.query.id
         const data=req.body
         if(!scheduleId){
             return res.send(new ApiError(400,"Invalid Schedule Id! Try Again"))
@@ -74,7 +74,7 @@ const updateScheduleByIdService=async(req,res)=>{
 
 const deleteScheduleByIdService=async(req,res)=>{
     try {
-        const scheduleId = req.params.scheduleId
+        const scheduleId = req.query.id
         if(!scheduleId){
             return res.send(new ApiError(400,"Invalid Schedule Id! Try Again"))
         }
