@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { Train } from "../models/trainModel.js";
 import ApiResponse from "../utils/apiResponse.js";
 import ApiError from "../utils/errorResponse.js";
+import { Schedule } from "../models/scheduleModel.js";
 
 const createTrainService=async(req,res)=>{
     try {
@@ -14,6 +15,28 @@ const createTrainService=async(req,res)=>{
             return res.send(new ApiError(301,"Train Creatio Failed! Try Again"))
         }
         return res.send(new ApiResponse(train,200,"Train Created Successfuly"))
+    } catch (error) {
+        console.log(error)
+        return res.send(new ApiError(500,{errors:error?.message}))
+    }
+}
+
+const findTrainBetweenStaionService=async(req,res)=>{
+    try {
+        const {boardingStationCode,destinationStationCode}=req.body
+        const trains= await Schedule.find({
+            stations:{
+              $all:[
+                { $elemMatch: { stationCode: boardingStationCode } },
+                { $elemMatch: { stationCode: destinationStationCode } }
+              ]
+            }
+        }).populate("trainId").select("-stations")
+        console.log(trains)
+        if(!trains.length){
+            return res.json(new ApiError(404,"No direct trains for this route!"))
+        }
+        return res.json(new ApiResponse(trains,200,"Train fecthed"))
     } catch (error) {
         console.log(error)
         return res.send(new ApiError(500,{errors:error?.message}))
@@ -109,4 +132,4 @@ const deleteTrainService=async(req,res)=>{
     }
 }
 
-export {createTrainService,getAllTrainService,getTrainByIdService,updateTrainService,deleteTrainService}
+export {createTrainService,getAllTrainService,getTrainByIdService,updateTrainService,deleteTrainService,findTrainBetweenStaionService}
