@@ -35,6 +35,8 @@ const redisConnect=async()=>{
           if (!redisClient || redisClient.status !== 'ready') {
               console.log("Redis client is not ready or closed");
          }
+
+
           return redisClient
       } catch (error) {
             console.log(error)

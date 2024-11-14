@@ -3,6 +3,8 @@ import { Train } from "../models/trainModel.js";
 import ApiResponse from "../utils/apiResponse.js";
 import ApiError from "../utils/errorResponse.js";
 import { Schedule } from "../models/scheduleModel.js";
+import {redisClient} from "../config/redisConfig.js"
+import geolib from 'geolib'
 
 const createTrainService=async(req,res)=>{
     try {
@@ -24,15 +26,74 @@ const createTrainService=async(req,res)=>{
 const findTrainBetweenStaionService=async(req,res)=>{
     try {
         const {boardingStationCode,destinationStationCode}=req.body
-        const trains= await Schedule.find({
-            stations:{
-              $all:[
-                { $elemMatch: { stationCode: boardingStationCode } },
-                { $elemMatch: { stationCode: destinationStationCode } }
-              ]
+        const trains = await Schedule.aggregate([
+            {
+                $match: {
+                    stations: {
+                        $all: [
+                            { $elemMatch: { stationCode: boardingStationCode } },
+                            { $elemMatch: { stationCode: destinationStationCode } }
+                        ]
+                    }
+                }
+            },
+            // Step 2: Unwind stations array to access individual stations
+            { $unwind: "$stations" },
+            // Step 3: Filter for only the boarding and destination stations
+            {
+                $match: {
+                    "stations.stationCode": { $in: [boardingStationCode, destinationStationCode] }
+                }
+            },
+            // Step 4: Group stations back together
+            {
+                $group: {
+                    _id: "$_id",
+                    trainId: { $first: "$trainId" },
+                    boardingStation: {
+                        $first: {
+                            $cond: [{ $eq: ["$stations.stationCode", boardingStationCode] }, "$stations", null]
+                        }
+                    },
+                    destinationStation: {
+                        $last: {
+                            $cond: [{ $eq: ["$stations.stationCode", destinationStationCode] }, "$stations", null]
+                        }
+                    }
+                }
+            },
+            {
+                $lookup:{
+                    from:"trains",
+                    foreignField:"_id",
+                    localField:"trainId",
+                    as:"trainDeatils"
+                }
+            },
+            {
+                $addFields:{
+                    trainDetails:"$trainDeatils"
+                }
+            },
+            {
+                $project: {
+                    trainId: 1,
+                    boardingStation: 1,
+                    destinationStation: 1,
+                    trainDetails:1
+                }
             }
-        }).populate("trainId").select("-stations")
-        console.log(trains)
+        ])
+
+        let boardingStationCoordinates=  { latitude: trains[0].boardingStation.location.coordinates[0], longitude:  trains[0].boardingStation.location.coordinates[1] };
+        let destinationStationCoordinates= { latitude: trains[0].destinationStation.location.coordinates[0], longitude:  trains[0].destinationStation.location.coordinates[1] };
+
+
+    
+        const distance = geolib.getDistance(boardingStationCoordinates, destinationStationCoordinates) / 1000;
+
+        trains.distance=distance
+        console.log( `${distance} km`, trains)
         if(!trains.length){
             return res.json(new ApiError(404,"No direct trains for this route!"))
         }
