@@ -21,11 +21,11 @@ const bookingSchema=new mongoose.Schema({
         required:true
     },
     boardingStation:{
-        type:Number,
+        type:String,
         required:true
     },
     destinationStation:{
-        type:Number,
+        type:String,
         required:true
     },
     journeyDate:{

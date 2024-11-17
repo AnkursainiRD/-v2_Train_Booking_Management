@@ -25,11 +25,13 @@ import userRoutes from "./routes/userRoutes.js"
 import bookingRoutes from "./routes/bookingRoutes.js"
 import trainRoutes from "./routes/trainRoutes.js"
 import scheduleRoutes from "./routes/scheduleRoutes.js"
+import paymentRoutes from "./routes/paymentRoutes.js"
 
 app.use("/api/v1/auth",authRoutes)
 app.use("/api/v1/user",userRoutes)
 app.use("/api/v1/booking",bookingRoutes)
 app.use("/api/v1/train",trainRoutes)
 app.use("/api/v1/schedule",scheduleRoutes)
+app.use("/api/v1/payment",paymentRoutes)
 
 export default app;

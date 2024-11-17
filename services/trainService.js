@@ -3,7 +3,6 @@ import { Train } from "../models/trainModel.js";
 import ApiResponse from "../utils/apiResponse.js";
 import ApiError from "../utils/errorResponse.js";
 import { Schedule } from "../models/scheduleModel.js";
-import {redisClient} from "../config/redisConfig.js"
 import geolib from 'geolib'
 
 const createTrainService=async(req,res)=>{

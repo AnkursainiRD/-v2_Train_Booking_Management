@@ -5,16 +5,16 @@ import {redisClient} from "../config/redisConfig.js";
 
 const getAllUsersService=async(req,res)=>{
     try {
-        const cachseUsers=await redisClient.get("users")
-        console.log("here")
-        if(cachseUsers){
-           return res.send(new ApiResponse(JSON.parse(cachseUsers),200,"Users Fetched from Cache")) 
-        }
+        // const cachseUsers=await redisClient.get("users")
+        // console.log("here")
+        // if(cachseUsers){
+        //    return res.send(new ApiResponse(JSON.parse(cachseUsers),200,"Users Fetched from Cache")) 
+        // }
         const users=await User.find()
         if(!users){
             return res.send(new ApiError(404,"No User Found!"))
         }
-        await redisClient.set("users",JSON.stringify(users))
+        // await redisClient.set("users",JSON.stringify(users))
         return res.send(new ApiResponse(users,200,"Users Fetched"))
     } catch (error) {
         console.log(error)

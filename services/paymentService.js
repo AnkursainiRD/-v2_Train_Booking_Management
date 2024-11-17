@@ -1,39 +1,35 @@
-import mongoose from "mongoose";
-import { Booking } from "../models/bookingModel.js";
-import { Payment } from "../models/paymentModel.js";
-import ApiResponse from "../utils/apiResponse.js";
+import razorpayInstance from "../config/razorpayConfig.js";
 import ApiError from "../utils/errorResponse.js";
-import { releaseSeatService } from "./bookingService.js";
+import ApiResponse from "../utils/apiResponse.js";
 
-const handlePayment=async(req,res)=>{
-    const {bookingId,paymentId,paymentStatus}=req.body
-    if(paymentStatus!=="success"){
-        return res.send(new ApiError(403,"Payment Verification Failed!"))
-    }
+const createOrderService=async(req,res)=>{
     try {
-        let booking;
-        if(paymentStatus=="success"){
-            booking=await Booking.findByIdAndUpdate(
-                bookingId,
-                {paymentStatus:'confirmed'},
-                {new:true}
-            )
-        
-        if(!booking){
-            return res.send(new ApiError(404,"Booking Not Found!"))
+        const {amount,currency} = req.body
+        if(!amount || !currency){
+            return res.status(400).send(new ApiError(400,"Amount are required!"))
         }
-        return res.send(new ApiResponse(booking,200,"Booking Confirmed Successful"))
-    }else{
-        if(booking){
-            const {trainId,journeyDate,seatNumber}=booking
-            await releaseSeatService(trainId,journeyDate,seatNumber)
-            return res.send(new ApiError(400,"Payment Failed! Ticket has been canceled!"))
+
+        const options={
+            amount:amount*100,
+            currency:currency,
+            receipt:`reciept_${Date.now()}`,
+            payment_capture:1,
+            notes: {
+                bookingId: req.body.bookingId, 
+                userId: req.user.id
+              },
         }
-    }
+
+        const order = await razorpayInstance.orders.create(options)
+        if(!order){
+            return res.status(400).send(new ApiError(400,"Order creation failed in payment!"))
+        }
+        return res.status(200).send(new ApiResponse(order,200,"Order created successfully"))
     } catch (error) {
-        console.log(error)
-        return res.send(new ApiError(500,{errors:error?.message}))
+        console.error('Error creating Razorpay order:', error);
+        res.status(500).send(new ApiError(500, 'Failed to create order'));
     }
 }
 
-export {handlePayment}
+
+export {createOrderService}

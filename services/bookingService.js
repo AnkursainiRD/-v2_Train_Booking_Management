@@ -71,7 +71,6 @@ const createBookingService=async(req,res)=>{
             availbilty.avalibleSeats -=1;
         }
         await train.save()
-        console.log(booking?.destinationStation>boardingStation)
         await delay(4000) //For Testing Purpose---
         if(!booking){
             booking=new Booking({
