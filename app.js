@@ -16,9 +16,9 @@ app.get("/",(req,res)=>{
     res.send(new ApiResponse("This is Health Check",200))
 })
 
-// app.get("/",(req,res)=>{
-//     res.sendFile(path.join(__dirname, 'static', 'home.html'));
-// })
+app.get("/py",(req,res)=>{
+    res.sendFile(path.join(__dirname, 'static', 'home.html'));
+})
 
 import authRoutes from "./routes/authRoutes.js"
 import userRoutes from "./routes/userRoutes.js"

@@ -1,7 +1,10 @@
-import { createOrderService } from "../services/paymentService.js";
+import { createOrderService,verifyPaymentService } from "../services/paymentService.js";
 
 const createOrderController=async(req,res)=>{
     await createOrderService(req,res)
 }
 
-export {createOrderController}
+const verifyPaymentController=async(req,res)=>{
+    verifyPaymentService(req,res)
+}
+export {createOrderController,verifyPaymentController}

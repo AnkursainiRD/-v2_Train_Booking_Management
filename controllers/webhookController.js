@@ -1,9 +1,11 @@
 import crypto from 'crypto'
 import ApiError from '../utils/errorResponse.js'
 import { Booking } from '../models/bookingModel.js'
+import { Payment } from '../models/paymentModel.js'
 
 const handlePaymentWebhook=async(req,res)=>{
     try {
+        console.log("first")
         const secret=process.env.RAZORPAY_WEBHOOK_SECRET;
         const signature = req.headers['x-razorpay-signature']
         const body = JSON.stringify(req.body)
@@ -20,9 +22,20 @@ const handlePaymentWebhook=async(req,res)=>{
         if(event === 'payment.captured'){
             const payment=payload.payment.entity;
             await Booking.findByIdAndUpdate(payment.notes.bookingId,{
-                status:"confirmed"
+                status:"confirmed",
+                paymentStatus:"success"
+            })
+            console.log(payment)
+
+            await Payment.create({
+                bookingId:payment.notes.bookingId,
+                userId:payment.notes.userId,
+                amount:payment.amount/100,
+                paymentStatus:"success",
+                paymentGatewayResponse:payment
             })
         }
+
         return res.status(200).send({success:true})
     } catch (error) {
         console.error('Error handling webhook:', error);
