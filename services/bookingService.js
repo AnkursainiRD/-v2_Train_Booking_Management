@@ -34,12 +34,13 @@ const getUserBookingService=async(req,res)=>{
 
 const createBookingService=async(req,res)=>{
     const {trainId,scheduleId,seatNumber,date,boardingStation,destinationStation}=req.body
+    
     const isLocked= await AquireSeatLock(trainId,scheduleId,seatNumber)
     if(!isLocked){
         return res.send(new ApiError(400,"Currently Another User is Booking This Seat! Please try again!"))
     }
     const session=await mongoose.startSession();
-    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+    // const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
     session.startTransaction()
     try {
         const train=await Train.findById({
@@ -71,7 +72,6 @@ const createBookingService=async(req,res)=>{
             availbilty.avalibleSeats -=1;
         }
         await train.save()
-        await delay(4000) //For Testing Purpose---
         if(!booking){
             booking=new Booking({
                 userId:req?.user?.id,
@@ -86,7 +86,8 @@ const createBookingService=async(req,res)=>{
             await session.commitTransaction()
             session.endSession()
             await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}`)
-            return res.send(new ApiResponse(booking,200,"Seat Boooked Successfuly"))
+            return res.send(new ApiResponse(booking,200,"Seat booked partialy"))
+          
         }
     } 
     catch (error) {

@@ -12,24 +12,21 @@ const createOrderService=async(req,res)=>{
             key_secret: process.env.RAZORPAY_KEY_SECRET,
           });
 
-        // const {amount,currency} = req.body
-        const opt={
-            amount:150,
-            currency:"INR",
-            bookingId:"673a109543950d7fe28874ec"
+        const {seatNumber,currency} = req.body
+        let amount;
+        seatNumber>20? amount=200 : amount=150
+        if(!amount || !currency){
+            return res.status(400).send(new ApiError(400,"Amount are required!"))
         }
-        // if(!amount || !currency){
-        //     return res.status(400).send(new ApiError(400,"Amount are required!"))
-        // }
 
         const options={
-            amount:opt.amount*100,
-            currency:opt.currency,
+            amount:amount*100,
+            currency:currency,
             receipt:`reciept_${Date.now()}`,
             payment_capture:1,
             notes: {
-                bookingId: opt.bookingId, 
-                userId: '673a0fbcf0b6901fac8f89ce'
+                bookingId: req.body.bookingId, 
+                userId: req?.user?.id
               },
         }
 

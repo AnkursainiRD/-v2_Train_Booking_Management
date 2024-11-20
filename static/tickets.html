@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seat Selection</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    .train-container {
+      display: inline-block;
+      margin-top: 50px;
+    }
+
+    .seat {
+      width: 40px;
+      height: 40px;
+      margin: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background-color: #f1f1f1;
+      text-align: center;
+      line-height: 40px;
+      cursor: pointer;
+    }
+
+    .seat.selected {
+      background-color: #4caf50;
+      color: white;
+    }
+
+    .seat.occupied {
+      background-color: #ff5722;
+      cursor: not-allowed;
+    }
+
+    .row {
+      display: flex;
+      justify-content: center;
+    }
+
+    .legend {
+      margin-top: 20px;
+    }
+
+    .legend span {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      margin: 5px;
+      border-radius: 5px;
+    }
+
+    .legend .available {
+      background-color: #f1f1f1;
+      border: 1px solid #ccc;
+    }
+
+    .legend .selected {
+      background-color: #4caf50;
+    }
+
+    .legend .occupied {
+      background-color: #ff5722;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #008cba;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #005f75;
+    }
+  </style>
+</head>
+<body>
+  <h1>Train Seat Selection</h1>
+  <div class="train-container">
+    <div class="row">
+      <div class="seat" seatNumber="11"></div>
+      <div class="seat" seatNumber="12"></div>
+      <div class="seat occupied" seatNumber="13"></div>
+      <div class="seat" seatNumber="14"></div>
+    </div>
+    <div class="row">
+      <div class="seat" seatNumber="15"></div>
+      <div class="seat" seatNumber="16"></div>
+      <div class="seat" seatNumber="17"></div>
+      <div class="seat occupied" seatNumber="18"></div>
+    </div>
+    <div class="row">
+      <div class="seat" seatNumber="19"></div>
+      <div class="seat selected" seatNumber="20"></div>
+      <div class="seat" seatNumber="21"></div>
+      <div class="seat" seatNumber="22"></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="available"></span> Available
+    <span class="selected"></span> Selected
+    <span class="occupied"></span> Occupied
+  </div>
+
+  <button id="confirmBtn">Confirm Selection</button>
+
+  <script>
+    const seats = document.querySelectorAll('.seat:not(.occupied)');
+    const confirmBtn = document.getElementById('confirmBtn');
+
+    seats.forEach(seat => {
+      seat.addEventListener('click', () => {
+        seat.classList.toggle('selected');
+      });
+    });
+
+    confirmBtn.addEventListener('click', () => {
+      const selectedSeats = Array.from(document.querySelectorAll('.seat.selected')).map(
+        seat => seat.getAttribute('seatNumber')
+      );
+      alert(`You have selected the following seat(s): ${selectedSeats.join(', ')}`);
+    });
+  </script>
+</body>
+</html>
