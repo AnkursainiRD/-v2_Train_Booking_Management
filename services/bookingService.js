@@ -1,11 +1,10 @@
-import mongoose from "mongoose";
+import mongoose, { Query } from "mongoose";
 import { Train } from "../models/trainModel.js";
-import {Schedule} from "../models/scheduleModel.js"
 import ApiError from "../utils/errorResponse.js";
 import { Booking } from "../models/bookingModel.js";
 import ApiResponse from "../utils/apiResponse.js";
 import {AquireSeatLock,delAsync} from "../utils/concurrecntHandller.js";
-
+import createOrderHandller from "../utils/createOrderHandller.js";
 
 const getUserBookingService=async(req,res)=>{
     try {
@@ -33,9 +32,9 @@ const getUserBookingService=async(req,res)=>{
 }
 
 const createBookingService=async(req,res)=>{
-    const {trainId,scheduleId,seatNumber,date,boardingStation,destinationStation}=req.body
+    const {trainId,scheduleId,seatNumber,journeyDate,boardingStation,destinationStation}=req.body
     
-    const isLocked= await AquireSeatLock(trainId,scheduleId,seatNumber)
+    const isLocked= await AquireSeatLock(trainId,scheduleId,seatNumber,journeyDate)
     if(!isLocked){
         return res.send(new ApiError(400,"Currently Another User is Booking This Seat! Please try again!"))
     }
@@ -45,7 +44,7 @@ const createBookingService=async(req,res)=>{
     try {
         const train=await Train.findById({
             _id:trainId,
-            'seatAvailiblity.date':date
+            'seatAvailiblity.date':journeyDate
         }).session(session)
         
         let booking= await Booking.findOne({
@@ -53,70 +52,64 @@ const createBookingService=async(req,res)=>{
             seatNumber:seatNumber
         })
         if(!train){
-            await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}`)
+            await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}:${journeyDate}`)
             return res.send(new ApiError(404,"Train not found! Check your date"))
         }
-        const availbilty= train.seatAvailiblity.find((avail)=>avail.date.toISOString()===new Date(date).toISOString())
+      
+
+        const availbilty= train.seatAvailiblity.find((avail)=>avail.date.toISOString()===new Date(journeyDate).toISOString())
 
         if(!availbilty || availbilty.avalibleSeats <=0){
-            await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}`)
+            await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}:${journeyDate}`)
             return res.send(new ApiError(400,"No Seats Are Availbe For This Date! Try different deat"))
         }
-        if(availbilty.reservedSeats.includes(seatNumber) && booking?.destinationStation>boardingStation){
-            await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}`)
+        if(availbilty.reservedSeats.includes(seatNumber)){
+            await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}:${journeyDate}`)
             return res.send(new ApiError(400,"Seat Already Reserved! Try different seat"))
         }
-        
-        availbilty.reservedSeats.push(seatNumber)
-        if(!availbilty.reservedSeats.includes(seatNumber)){
-            availbilty.avalibleSeats -=1;
-        }
-        await train.save()
+      
+
         if(!booking){
             booking=new Booking({
                 userId:req?.user?.id,
                 trainId,
                 scheduleId,
                 seatNumber,
-                journeyDate:date,
+                journeyDate,
                 boardingStation,
                 destinationStation
             })
             await booking.save()
+
+            const paymentResponse=await createOrderHandller(seatNumber,booking?._id, req.user?.id,scheduleId)
+            if(!paymentResponse.success){
+                await Booking.findByIdAndDelete(booking?._id)
+                await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}:${journeyDate}`)
+                return res.send(new ApiError(400,paymentResponse.message))
+            }
+           
+
+            availbilty.reservedSeats.push(seatNumber)
+            if(availbilty.reservedSeats.includes(seatNumber)){
+                console.log("Seat reduce by 1")
+                availbilty.avalibleSeats -=1;
+                await train.save()
+            }
             await session.commitTransaction()
             session.endSession()
-            await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}`)
-            return res.send(new ApiResponse(booking,200,"Seat booked partialy"))
-          
+            return res.send(new ApiResponse(paymentResponse,200,"Seat booked partialy"))   
         }
     } 
     catch (error) {
         await session.abortTransaction()
         session.endSession()
-        await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}`)
+        await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}:${journeyDate}`)
         console.log(error)
         return res.send(new ApiError(500,{errors:error?.message}))
     }
 }
 
-const releaseSeatService=async(trainId,journeyDate,seatNumber)=>{
-    try {
-        const train= await Train.findById(trainId)
-        if(!train){
-            return false
-        }
-        const availbilty=train.seatAvailiblity.find((avail)=>avail.journeyDate.toISOString()===new Date(journeyDate).toISOString())
-        if(availbilty && availbilty.reservedSeats.includes(seatNumber)){
-            availbilty.reservedSeats=availbilty.reservedSeats.filter(seat=>seat!==seatNumber)
-            availbilty.avalibleSeats +=1;
-            await train.save()
-            return true
-        }
-        return false
-    } catch (error) {
-        console.log(error)
-    }
-}
+
 
 
 const canceledBookingService=async(req,res)=>{
@@ -135,4 +128,4 @@ const canceledBookingService=async(req,res)=>{
 }
 
 
-export {getUserBookingService,createBookingService,canceledBookingService,releaseSeatService}
+export {getUserBookingService,createBookingService,canceledBookingService}

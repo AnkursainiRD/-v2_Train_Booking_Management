@@ -9,11 +9,11 @@ const redisClient=redis.createClient({
 const setAsync= promisify(redisClient.set).bind(redisClient)
 const delAsync= promisify(redisClient.del).bind(redisClient)
 
-const AquireSeatLock=async(trainId,scheduleId,seatNumber)=>{
-    const lockKey=`lock:seat:${trainId}:${scheduleId}:${seatNumber}`
-    const lockTime=10000;
+const AquireSeatLock=async(trainId,scheduleId,seatNumber,journeyDate)=>{
+    const lockKey=`lock:seat:${trainId}:${scheduleId}:${seatNumber}:${journeyDate}`
+    const lockTime=50000;
     const lock= await setAsync(lockKey, 'locked', 'NX', 'PX', lockTime)
-    console.log(lock)
+    console.log('lokced for',seatNumber,lock)
 
     if(lock === 'OK'){
         return true

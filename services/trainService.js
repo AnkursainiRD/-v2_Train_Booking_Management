@@ -22,6 +22,10 @@ const createTrainService=async(req,res)=>{
     }
 }
 
+// const getstationsService=async(req,res)=>{
+
+// }
+
 const findTrainBetweenStaionService=async(req,res)=>{
     try {
         const {boardingStationCode,destinationStationCode}=req.body

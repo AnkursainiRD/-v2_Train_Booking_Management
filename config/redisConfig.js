@@ -1,7 +1,7 @@
 import Redis from 'ioredis'
 let redisClient;
-
 const redisConnect=async()=>{
+
         // if(!redisClient){
             
         //     redisClient=redis.createClient({
@@ -36,7 +36,7 @@ const redisConnect=async()=>{
               console.log("Redis client is not ready or closed");
          }
 
-
+         
           return redisClient
       } catch (error) {
             console.log(error)

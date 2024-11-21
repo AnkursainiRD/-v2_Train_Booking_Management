@@ -2,6 +2,8 @@ import crypto from 'crypto'
 import ApiError from '../utils/errorResponse.js'
 import { Booking } from '../models/bookingModel.js'
 import { Payment } from '../models/paymentModel.js'
+import { delAsync } from '../utils/concurrecntHandller.js'
+import { releaseSeatHandller } from '../utils/releaseSeatHandller.js'
 
 const handlePaymentWebhook=async(req,res)=>{
     try {
@@ -19,9 +21,11 @@ const handlePaymentWebhook=async(req,res)=>{
         const event=req.body.event
         const payload=req.body.payload
 
+        // const booking=
+        let booking;
         if(event === 'payment.captured'){
             const payment=payload.payment.entity;
-            await Booking.findByIdAndUpdate(payment.notes.bookingId,{
+            booking=await Booking.findByIdAndUpdate(payment.notes.bookingId,{
                 status:"confirmed",
                 paymentStatus:"success"
             })
@@ -34,13 +38,22 @@ const handlePaymentWebhook=async(req,res)=>{
                 paymentStatus:"success",
                 paymentGatewayResponse:payment
             })
+            await delAsync(`lock:seat:${booking.trainId}:${booking.scheduleId}:${booking.seatNumber}:${booking.journeyDate}`)
+            return res.status(200).send({success:true})
+        }else if(event==='payment.failed'){
+            await delAsync(`lock:seat:${booking.trainId}:${booking.scheduleId}:${booking.seatNumber}:${booking.journeyDate}`)
+            await releaseSeatHandller(booking.trainId, booking.journeyDate, booking.seatNumber)
+            return res.send(new ApiError(400,"Booking failed due to failed payment!"))
+        }else{
+            await delAsync(`lock:seat:${booking.trainId}:${booking.scheduleId}:${booking.seatNumber}:${booking.journeyDate}`)
+            await releaseSeatHandller(booking.trainId, booking.journeyDate, booking.seatNumber)
+            return res.send(new ApiError(400,"Invalid payment type!"))
         }
 
-        return res.status(200).send({success:true})
     } catch (error) {
         console.error('Error handling webhook:', error);
-        res.status(500).send(new ApiError(500, 'Webhook processing failed'));   
+        return res.status(500).send(new ApiError(500, 'Webhook processing failed'));   
     }
-}
+} 
 
 export { handlePaymentWebhook }
