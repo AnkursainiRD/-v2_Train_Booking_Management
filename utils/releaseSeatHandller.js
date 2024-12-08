@@ -3,14 +3,17 @@ import {redisClient} from "../config/redisConfig.js";
 import { Booking } from "../models/bookingModel.js";
 import mongoose from "mongoose";
 
-const releaseSeatHandller=async(trainId, journeyDate, seatNumber)=>{
+const releaseSeatHandller=async(trainId, journeyDate, seatNumber,userId)=>{
     try {
+        console.log("line 8",trainId, journeyDate, seatNumber,userId)
         const train= await Train.findById(trainId)
         const booking = await Booking.findOne({
             $and: [
                 { trainId: trainId },
-                { journeyDate:`${journeyDate}:00:00.000+00:00`},
-                { seatNumber: seatNumber },
+                { userId: userId},
+                // { journeyDate:`${journeyDate}:00:00.000+00:00`},
+                { journeyDate:`${journeyDate}`},
+                { seatNumber: String(seatNumber) },
               ]
           });
       
@@ -29,9 +32,11 @@ const releaseSeatHandller=async(trainId, journeyDate, seatNumber)=>{
             }
         }
    
-        const availbilty=train.seatAvailiblity.find((avail)=>avail.date.toISOString()===new Date(`${journeyDate}:00:00.000Z`).toISOString())
-        if(availbilty && availbilty.reservedSeats.includes(seatNumber)){
-            availbilty.reservedSeats=availbilty.reservedSeats.filter(seat=>seat!==seatNumber)
+        const availbilty=train.seatAvailiblity.find((avail)=>avail.date.toISOString()===new Date(`${journeyDate}`).toISOString())
+        if(availbilty && availbilty.reservedSeats.includes(String(seatNumber))){
+            availbilty.reservedSeats=availbilty.reservedSeats.filter(seat=> seat!==String(seatNumber))
+            console.log(availbilty.reservedSeats.filter(seat=> seat!==String(seatNumber)))
+            console.log(availbilty.reservedSeats)
             availbilty.avalibleSeats +=1;
             await train.save()
             await booking.deleteOne()
@@ -64,9 +69,13 @@ const listenForExpiry=()=>{
     })
 
     redisSubscriber.on('pmessage', async(pattern,channel,expiredKey)=>{
+        console.log("At pmessage")
         if(expiredKey.startsWith(`lock:seat:`)){
-            const keyData=expiredKey.replace(/^lock:seat:/,'').split(':');
-            await releaseSeatHandller(keyData[0], keyData[3], keyData[2]);
+            console.log("line 68")
+            const keyData=expiredKey.replace(/^lock:seat:/,'').split('=');
+
+            console.log("line 69",keyData)
+            await releaseSeatHandller(keyData[0], keyData[3], keyData[2], keyData[4]);
         }
     })
 }

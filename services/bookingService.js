@@ -5,6 +5,7 @@ import { Booking } from "../models/bookingModel.js";
 import ApiResponse from "../utils/apiResponse.js";
 import {AquireSeatLock,delAsync} from "../utils/concurrecntHandller.js";
 import createOrderHandller from "../utils/createOrderHandller.js";
+import { releaseSeatHandller } from "../utils/releaseSeatHandller.js";
 
 const getUserBookingService=async(req,res)=>{
     try {
@@ -33,8 +34,8 @@ const getUserBookingService=async(req,res)=>{
 
 const createBookingService=async(req,res)=>{
     const {trainId,scheduleId,seatNumber,journeyDate,boardingStation,destinationStation}=req.body
-    
-    const isLocked= await AquireSeatLock(trainId,scheduleId,seatNumber,journeyDate)
+    const userId=req?.user?.id
+    const isLocked= await AquireSeatLock(trainId,scheduleId,seatNumber,journeyDate,userId)
     if(!isLocked){
         return res.send(new ApiError(400,"Currently Another User is Booking This Seat! Please try again!"))
     }
@@ -52,7 +53,7 @@ const createBookingService=async(req,res)=>{
             seatNumber:seatNumber
         })
         if(!train){
-            await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}:${journeyDate}`)
+            await delAsync(`lock:seat:${trainId}=${scheduleId}=${seatNumber}=${journeyDate}=${userId}`)
             return res.send(new ApiError(404,"Train not found! Check your date"))
         }
       
@@ -60,11 +61,11 @@ const createBookingService=async(req,res)=>{
         const availbilty= train.seatAvailiblity.find((avail)=>avail.date.toISOString()===new Date(journeyDate).toISOString())
 
         if(!availbilty || availbilty.avalibleSeats <=0){
-            await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}:${journeyDate}`)
+            await delAsync(`lock:seat:${trainId}=${scheduleId}=${seatNumber}=${journeyDate}=${userId}`)
             return res.send(new ApiError(400,"No Seats Are Availbe For This Date! Try different deat"))
         }
         if(availbilty.reservedSeats.includes(seatNumber)){
-            await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}:${journeyDate}`)
+            await delAsync(`lock:seat:${trainId}=${scheduleId}=${seatNumber}=${journeyDate}=${userId}`)
             return res.send(new ApiError(400,"Seat Already Reserved! Try different seat"))
         }
       
@@ -84,7 +85,7 @@ const createBookingService=async(req,res)=>{
             const paymentResponse=await createOrderHandller(seatNumber,booking?._id, req.user?.id,scheduleId)
             if(!paymentResponse.success){
                 await Booking.findByIdAndDelete(booking?._id)
-                await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}:${journeyDate}`)
+                await delAsync(`lock:seat:${trainId}=${scheduleId}=${seatNumber}=${journeyDate}=${userId}`)
                 return res.send(new ApiError(400,paymentResponse.message))
             }
            
@@ -103,7 +104,7 @@ const createBookingService=async(req,res)=>{
     catch (error) {
         await session.abortTransaction()
         session.endSession()
-        await delAsync(`lock:seat:${trainId}:${scheduleId}:${seatNumber}:${journeyDate}`)
+        await delAsync(`lock:seat:${trainId}=${scheduleId}=${seatNumber}=${journeyDate}=${userId}`)
         console.log(error)
         return res.send(new ApiError(500,{errors:error?.message}))
     }
@@ -128,4 +129,35 @@ const canceledBookingService=async(req,res)=>{
 }
 
 
-export {getUserBookingService,createBookingService,canceledBookingService}
+
+const releaseLockService=async(req,res)=>{
+    try {
+        console.log("here at realset lock at 135")
+        const {trainId,scheduleId,seatNumber,journeyDate}=req.body
+        const userId=req?.user?.id
+        console.log(req.body)
+        const lock=await delAsync(`lock:seat:${trainId}=${scheduleId}=${seatNumber}=${journeyDate}=${userId}`)
+        console.log("Lock released")
+        return res.status(200).send(new ApiResponse(lock,200,"Locked Released"))
+    } catch (error) {
+        console.log(error)
+        return res.send(new ApiError(500,{errors:error?.message}))   
+    }
+}
+
+
+const releaseSeatService=async(req,res)=>{
+    try {
+        console.log("here at realset seat at 150")
+
+        const {trainId,journeyDate,seatNumber}=req.body
+        console.log(req.body)
+        const seat=await releaseSeatHandller(trainId, journeyDate, seatNumber,req?.user?.id)
+        return res.status(200).send(new ApiResponse(seat,200,"Seat Released"))
+    } catch (error) {
+        console.log(error)
+        return res.send(new ApiError(500,{errors:error?.message}))   
+    }
+}
+
+export {getUserBookingService,createBookingService,canceledBookingService,releaseLockService,releaseSeatService}

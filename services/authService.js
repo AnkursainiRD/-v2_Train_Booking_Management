@@ -3,16 +3,34 @@ import ApiError from "../utils/errorResponse.js"
 import ApiResponse from "../utils/apiResponse.js"
 import mailSenderService from "../utils/mailSender.js"
 import { redisClient } from "../config/redisConfig.js"
+import { otpHtmlTemplate } from "../static/mailTemplates.js"
+import arcjet, {validateEmail} from "@arcjet/node"
 
 const registerUserService=async(req,res)=>{
     try {
         const {userName,password,email,phone,role}=req.body
         
+        const aj = arcjet({
+            key: process.env.ARCJET_KEY,
+            rules: [
+              validateEmail({
+                mode: "LIVE",
+                block: ["DISPOSABLE", "INVALID", "NO_MX_RECORDS"],
+              }),
+            ],
+          });
+
+        const decision=await aj.protect(req,{email})
+
+        if (decision.isDenied()) {
+            return res.send(new ApiError(403,"Invalid or Disposal mail! Check again!"));
+          } 
+
         const existedUser=await User.findOne({email:email})
         if(existedUser){
             return res.send(new ApiError(409,"User Already Exists!"))
         }
-        const otp=await mailSenderService(email)
+        const otp=await mailSenderService(email,otpHtmlTemplate)
         await redisClient.setex(email,300,JSON.stringify(otp))
 
         const user=await User.create({userName,password,email,phone,role})
@@ -49,6 +67,25 @@ const verifyOtpService=async(req,res)=>{
 const loginUserService=async(req,res)=>{
     try {
         const {email,password}=req.body
+
+        const aj = arcjet({
+            key: process.env.ARCJET_KEY,
+            rules: [
+              validateEmail({
+                mode: "LIVE",
+                block: ["DISPOSABLE", "INVALID", "NO_MX_RECORDS"],
+              }),
+            ],
+          });
+
+        const decision=await aj.protect(req,{email})
+
+        if (decision.isDenied()) {
+            res.writeHead(403, { "Content-Type": "application/json" });
+            res.end(new ApiError(403,"Invalid or Disposal mail! Check again!"));
+          } 
+          
+
         if(!email && !password){
             return res.send(new ApiError(400,"Credntials are missing!"))
         }
@@ -66,7 +103,8 @@ const loginUserService=async(req,res)=>{
         }
         const options={
             httpOnly:true,
-            secure:true
+            secure:true,
+            sameSite: 'Lax'
         }
         return res.cookie("token",token,options).send(new ApiResponse(200,"User Logged In"))
     } catch (error) {

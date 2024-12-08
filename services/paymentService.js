@@ -52,6 +52,7 @@ const verifyPaymentService=async (req, res) => {
        .digest('hex');
    
      if (generatedSignature === razorpay_signature) {
+        console.log("here at the payment verification")
        res.json({ success: true, message: 'Payment verified successfully' });
      } else {
        res.status(400).json({ success: false, message: 'Payment verification failed' });

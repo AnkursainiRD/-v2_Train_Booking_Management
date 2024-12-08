@@ -6,13 +6,22 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon index.js",
-    "start-ngrok": "ngrok http 3000"
+    "start": "nodemon index.js",
+    "start-ngrok": "ngrok http 3000",
+    "start-worker": "pm2 start services/notificationService.js --name notification-worker",
+    "stop-worker": "pm2 stop notification-worker",
+    "restart-worker": "pm2 restart notification-worker",
+    "delete-worker": "pm2 delete notification-worker",
+    "logs-worker": "pm2 logs notification-worker",
+    "save-pm2": "pm2 save",
+    "startup-pm2": "pm2 startup"
   },
   "author": "Ankur Saini",
   "license": "ISC",
   "dependencies": {
-    "bcrypt": "^5.1.1",
-    "bullmq": "^5.21.2",
+    "@arcjet/node": "^1.0.0-alpha.34",
+    "bcryptjs": "^2.4.3",
+    "bullmq": "^5.31.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -23,8 +32,10 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.7.3",
     "ngrok": "^5.0.0-beta.2",
+    "node-cron": "^3.0.3",
     "nodemailer": "^6.9.16",
     "nodemon": "^3.1.7",
+    "pm2": "^5.4.3",
     "razorpay": "^2.9.5",
     "util": "^0.12.5"
   }

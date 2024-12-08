@@ -4,6 +4,9 @@ import { Booking } from '../models/bookingModel.js'
 import { Payment } from '../models/paymentModel.js'
 import { delAsync } from '../utils/concurrecntHandller.js'
 import { releaseSeatHandller } from '../utils/releaseSeatHandller.js'
+import addNotificationJob from '../config/bullmqConfig.js'
+import { User } from '../models/userModel.js'
+import { ticketHtmlTemplate } from '../static/mailTemplates.js'
 
 const handlePaymentWebhook=async(req,res)=>{
     try {
@@ -20,15 +23,20 @@ const handlePaymentWebhook=async(req,res)=>{
         
         const event=req.body.event
         const payload=req.body.payload
+        const bookingId=payload.payment.entity.notes.bookingId
+        const booking= await Booking.findById(bookingId)
+        const user=await User.findById(booking.userId)
+       
 
-        // const booking=
-        let booking;
+
+        console.log("at webhook",booking)
+
         if(event === 'payment.captured'){
-            const payment=payload.payment.entity;
-            booking=await Booking.findByIdAndUpdate(payment.notes.bookingId,{
-                status:"confirmed",
-                paymentStatus:"success"
-            })
+            
+            const payment=payload.payment.entity
+            booking.status="confirmed",
+            booking.paymentStatus="success"
+            await booking.save()
             console.log(payment)
 
             await Payment.create({
@@ -38,15 +46,16 @@ const handlePaymentWebhook=async(req,res)=>{
                 paymentStatus:"success",
                 paymentGatewayResponse:payment
             })
-            await delAsync(`lock:seat:${booking.trainId}:${booking.scheduleId}:${booking.seatNumber}:${booking.journeyDate}`)
+            // await delAsync(`lock:seat:${booking.trainId}:${booking.scheduleId}:${booking.seatNumber}:${booking.journeyDate}`)
+            await addNotificationJob(user,ticketHtmlTemplate)
             return res.status(200).send({success:true})
         }else if(event==='payment.failed'){
-            await delAsync(`lock:seat:${booking.trainId}:${booking.scheduleId}:${booking.seatNumber}:${booking.journeyDate}`)
-            await releaseSeatHandller(booking.trainId, booking.journeyDate, booking.seatNumber)
+            // await delAsync(`lock:seat:${booking.trainId}:${booking.scheduleId}:${booking.seatNumber}:${booking.journeyDate}`)
+            await releaseSeatHandller(booking.trainId, booking.journeyDate, booking.seatNumber,booking.userId)
             return res.send(new ApiError(400,"Booking failed due to failed payment!"))
         }else{
-            await delAsync(`lock:seat:${booking.trainId}:${booking.scheduleId}:${booking.seatNumber}:${booking.journeyDate}`)
-            await releaseSeatHandller(booking.trainId, booking.journeyDate, booking.seatNumber)
+            // await delAsync(`lock:seat:${booking.trainId}:${booking.scheduleId}:${booking.seatNumber}:${booking.journeyDate}`)
+            await releaseSeatHandller(booking.trainId, booking.journeyDate, booking.seatNumber,booking.userId)
             return res.send(new ApiError(400,"Invalid payment type!"))
         }
 
